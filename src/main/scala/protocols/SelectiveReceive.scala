@@ -59,14 +59,14 @@ object SelectiveReceive {
           )
         } else {
           if (bufferSize == 0) {
-            next
+            Behavior.same
           } else {
             stashBuffer.stash(msg)
             Behavior.unhandled
           }
         }
       } else {
-        stashBuffer.unstashAll(ctx.asScala, next)
+        stashBuffer.unstashAll(ctx.asScala, SelectiveReceive(bufferSize, next))
       }
     }
 

@@ -8,28 +8,33 @@ import org.scalacheck.Gen
 import org.scalatest.{FunSuite, MustMatchers}
 import org.scalatest.prop.PropertyChecks
 
-trait SelectiveReceiveSpec extends FunSuite with PropertyChecks with MustMatchers {
+trait SelectiveReceiveSpec
+    extends FunSuite
+    with PropertyChecks
+    with MustMatchers {
 
-    def behavior[T](inbox: TestInbox[T], size: Int, seq: List[T]) =
-        SelectiveReceive(size, expectOne(inbox, seq))
+  def behavior[T](inbox: TestInbox[T], size: Int, seq: List[T]) =
+    SelectiveReceive(size, expectOne(inbox, seq))
 
-    def expectOne[T](inbox: TestInbox[T], seq: List[T]): Behavior[T] =
-        seq match {
-            case x :: xs =>
-                receiveMessagePartial {
-                    case `x` =>
-                        inbox.ref ! x
-                        expectOne(inbox, xs)
-                }
-            case Nil => Behaviors.ignore
-        }
-    
-    def expectStart[T](inbox: TestInbox[T], start: T, followUp: Behavior[T]): Behavior[T] =
+  def expectOne[T](inbox: TestInbox[T], seq: List[T]): Behavior[T] =
+    seq match {
+      case x :: xs =>
         receiveMessagePartial {
-            case x @ `start` =>
-                inbox.ref ! x
-                followUp
+          case `x` =>
+            inbox.ref ! x
+            expectOne(inbox, xs)
         }
+      case Nil => Behaviors.ignore
+    }
+
+  def expectStart[T](inbox: TestInbox[T],
+                     start: T,
+                     followUp: Behavior[T]): Behavior[T] =
+    receiveMessagePartial {
+      case x @ `start` =>
+        inbox.ref ! x
+        followUp
+    }
 
   test("A SelectiveReceive Decorator must eventually execute the behavior") {
     val values = List("A", "B", "C")
@@ -94,12 +99,10 @@ trait SelectiveReceiveSpec extends FunSuite with PropertyChecks with MustMatcher
 
   test("A SelectiveReceive Decorator must try in receive order") {
     val i = TestInbox[Int]()
-    val b = SelectiveReceive(2, expectStart(i, 0,
-      receiveMessage[Int] { t =>
-        i.ref ! t
-        same
-      }
-    ))
+    val b = SelectiveReceive(2, expectStart(i, 0, receiveMessage[Int] { t =>
+      i.ref ! t
+      same
+    }))
     val testkit = BehaviorTestKit(b, "receive order")
     testkit.ref ! 1
     testkit.runOne()
@@ -111,25 +114,25 @@ trait SelectiveReceiveSpec extends FunSuite with PropertyChecks with MustMatcher
     i.receiveAll() mustBe Seq(0, 1, 2)
   }
 
-  test("A SelectiveReceive Decorator must restart retrying at the head of the queue") {
+  test(
+    "A SelectiveReceive Decorator must restart retrying at the head of the queue") {
     // hint: only the first parameter list participates in equality checking
     case class Msg(cls: Int)(val value: Int)
 
     val i = TestInbox[Msg]()
-    val b = SelectiveReceive(3,
-      expectStart(i, Msg(0)(0),
-        expectStart(i, Msg(1)(0),
-          receiveMessage[Msg] { t =>
-            i.ref ! t
-            same
-          }
-        )))
+    val b = SelectiveReceive(
+      3,
+      expectStart(i, Msg(0)(0), expectStart(i, Msg(1)(1), receiveMessage[Msg] {
+        t =>
+          i.ref ! t
+          same
+      })))
     val testkit = BehaviorTestKit(b, "receive order")
     testkit.ref ! Msg(2)(2)
     testkit.runOne()
     testkit.ref ! Msg(1)(1)
     testkit.runOne()
-    testkit.ref ! Msg(2)(3)
+    testkit.ref ! Msg(3)(3)
     testkit.runOne()
     i.receiveAll() mustBe Seq()
     testkit.ref ! Msg(0)(0)
@@ -137,9 +140,14 @@ trait SelectiveReceiveSpec extends FunSuite with PropertyChecks with MustMatcher
     i.receiveAll().map(_.value) mustBe Seq(0, 1, 2, 3)
   }
 
-  test("A SelectiveReceive Decorator must still stash unhandled messages after some messages have been handled") {
+  test(
+    "A SelectiveReceive Decorator must still stash unhandled messages after some messages have been handled") {
     val i = TestInbox[Char]()
-    val b = SelectiveReceive(1, expectStart(i, 'a', expectStart(i, 'a', expectStart(i, 'z', Behaviors.ignore))))
+    val b = SelectiveReceive(
+      1,
+      expectStart(i,
+                  'a',
+                  expectStart(i, 'a', expectStart(i, 'z', Behaviors.ignore))))
     val testkit = BehaviorTestKit(b)
     testkit.ref ! 'z'
     testkit.runOne()
@@ -149,7 +157,8 @@ trait SelectiveReceiveSpec extends FunSuite with PropertyChecks with MustMatcher
     i.receiveAll() mustBe Seq('a') // “a” has been handled, and “z” has been stashed again
     testkit.ref ! 'a'
     testkit.runOne()
-    withClue("The initial message 'z' has not been handled, eventually. Make sure unstashed messages are interpreted by a behavior wrapped in an interceptor.") {
+    withClue(
+      "The initial message 'z' has not been handled, eventually. Make sure unstashed messages are interpreted by a behavior wrapped in an interceptor.") {
       i.receiveAll() mustBe Seq('a', 'z') // “a” and the initial “z” have been handled
     }
   }
