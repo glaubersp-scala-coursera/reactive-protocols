@@ -28,10 +28,10 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     val extract = Gen.const(Extract[Int, Int](identity, i.ref))
     val map = Gen.oneOf(
       Gen.zip(arbitrary[Int], serial).map {
-        case(x, id) => Modify[Int, String](x + _, id, s"add $x", done.ref)
+        case (x, id) => Modify[Int, String](x + _, id, s"add $x", done.ref)
       },
       Gen.zip(arbitrary[Int], serial).map {
-        case(x, id) => Modify[Int, String](x * _, id, s"times $x", done.ref)
+        case (x, id) => Modify[Int, String](x * _, id, s"times $x", done.ref)
       }
     )
     val op = Gen.oneOf(extract, map)
@@ -75,7 +75,8 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     testkit.ref ! Begin(sessionInbox.ref)
     testkit.runOne()
     val ref :: Nil = sessionInbox.receiveAll()
-    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref`) :: _ :: Nil = testkit.retrieveAllEffects()
+    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref`) :: _ :: Nil =
+      testkit.retrieveAllEffects()
     ref must be(testkit.childInbox(ref.path.name).ref)
     val session = testkit.childTestKit(ref)
 
@@ -87,7 +88,7 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     done.receiveAll() must be(Seq("committed"))
     session.ref ! Extract((x: Int) => x.toString, done.ref)
     session.runOne()
-    done.receiveAll() mustBe empty
+    done.receiveAll() mustBe Seq("2")
 
     testkit.runOne()
     testkit.selfInbox.hasMessages must be(false)
@@ -95,7 +96,8 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     testkit.ref ! Begin(sessionInbox.ref)
     testkit.runOne()
     val ref2 :: Nil = sessionInbox.receiveAll()
-    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref2`) :: _ :: Nil = testkit.retrieveAllEffects()
+    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref2`) :: _ :: Nil =
+      testkit.retrieveAllEffects()
     ref2 must be(testkit.childInbox(ref2.path.name).ref)
     val session2 = testkit.childTestKit(ref2)
 
@@ -109,13 +111,16 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     val done = TestInbox[String]()
 
     val start = 1
-    val testkit = BehaviorTestKit(Transactor(start, 3.seconds).asInstanceOf[Behavior[PrivateCommand[Int]]])
+    val testkit = BehaviorTestKit(
+      Transactor(start, 3.seconds).asInstanceOf[Behavior[PrivateCommand[Int]]]
+    )
 
     val sessionInbox = TestInbox[ActorRef[Session[Int]]]()
     testkit.ref ! Begin(sessionInbox.ref)
     testkit.runOne()
     val ref :: Nil = sessionInbox.receiveAll()
-    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref`) :: _ :: Nil = testkit.retrieveAllEffects()
+    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref`) :: _ :: Nil =
+      testkit.retrieveAllEffects()
     ref must be(testkit.childInbox(ref.path.name).ref)
     val session = testkit.childTestKit(ref)
 
@@ -137,7 +142,8 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     testkit.ref ! Begin(sessionInbox.ref)
     testkit.runOne()
     val ref2 :: Nil = sessionInbox.receiveAll()
-    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref2`) :: _ :: Nil = testkit.retrieveAllEffects()
+    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref2`) :: _ :: Nil =
+      testkit.retrieveAllEffects()
     ref2 must be(testkit.childInbox(ref2.path.name).ref)
     val session2 = testkit.childTestKit(ref2)
 
@@ -151,13 +157,16 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     val done = TestInbox[String]()
 
     val start = 1
-    val testkit = BehaviorTestKit(Transactor(start, 3.seconds).asInstanceOf[Behavior[PrivateCommand[Int]]])
+    val testkit = BehaviorTestKit(
+      Transactor(start, 3.seconds).asInstanceOf[Behavior[PrivateCommand[Int]]]
+    )
 
     val sessionInbox = TestInbox[ActorRef[Session[Int]]]()
     testkit.ref ! Begin(sessionInbox.ref)
     testkit.runOne()
     val ref :: Nil = sessionInbox.receiveAll()
-    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref`) :: _ :: Nil = testkit.retrieveAllEffects()
+    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref`) :: _ :: Nil =
+      testkit.retrieveAllEffects()
     ref must be(testkit.childInbox(ref.path.name).ref)
     val session = testkit.childTestKit(ref)
 
@@ -177,7 +186,8 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     testkit.ref ! Begin(sessionInbox.ref)
     testkit.runOne()
     val ref2 :: Nil = sessionInbox.receiveAll()
-    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref2`) :: _ :: Nil = testkit.retrieveAllEffects()
+    val Effect.SpawnedAnonymous(_, _) :: Effect.Watched(`ref2`) :: _ :: Nil =
+      testkit.retrieveAllEffects()
     ref2 must be(testkit.childInbox(ref2.path.name).ref)
     val session2 = testkit.childTestKit(ref2)
 
@@ -189,7 +199,9 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
 
   test("A Transactor must ignore new sessions while in a session") {
     val start = 1
-    val testkit = BehaviorTestKit(Transactor(start, 3.seconds).asInstanceOf[Behavior[PrivateCommand[Int]]])
+    val testkit = BehaviorTestKit(
+      Transactor(start, 3.seconds).asInstanceOf[Behavior[PrivateCommand[Int]]]
+    )
 
     val sessionInbox = TestInbox[ActorRef[Session[Int]]]()
     testkit.ref ! Begin(sessionInbox.ref)
@@ -237,7 +249,9 @@ trait TransactorSpec extends FunSuite with MustMatchers with PropertyChecks {
     val sessionMock = TestInbox[Session[Int]]()
     val testkit = BehaviorTestKit(Transactor(0, 3.seconds))
     (1 to 31).foreach(_ => {
-      testkit.ref.unsafeUpcast[PrivateCommand[Int]] ! RolledBack(sessionMock.ref)
+      testkit.ref.unsafeUpcast[PrivateCommand[Int]] ! RolledBack(
+        sessionMock.ref
+      )
       testkit.runOne()
     })
   }
